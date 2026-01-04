@@ -37,7 +37,7 @@ Yes! Let me map out where ALL the remaining steps belong in the validation frame
 ---
 
 ## **Complete Step Classification**
-
+```
 | **Step** | **Title** | **Phase/Category** | **What It Tests** | **Primary Tools** |
 |----------|-----------|-------------------|-------------------|-------------------|
 | **1** | Perform single-node stress test | **Phase 1: Single-Node GPU Validation** | GPU compute, memory, thermal, power on ONE node | DCGM diag, nvidia-smi, gpu-burn |
@@ -54,7 +54,7 @@ Yes! Let me map out where ALL the remaining steps belong in the validation frame
 | **12** | Perform HPL burn-in | **Phase 3: Multi-Node Validation** | Multi-node compute stability and performance | HPL (multi-node configuration) |
 | **13** | Perform Nemo burn-in | **Phase 4: Application Validation** | Real-world AI workload stability (LLM training) | NVIDIA NeMo framework |
 | **14** | Test storage | **Phase 2/4: Infrastructure + Application** | Storage I/O performance and reliability | fio, dd, mdadm, NFS tests |
-
+```
 ---
 
 ## **Detailed Breakdown by Phase**
@@ -62,7 +62,7 @@ Yes! Let me map out where ALL the remaining steps belong in the validation frame
 ### **PHASE 1: Single-Node GPU Validation (Steps 1-3, 9)**
 
 These validate **individual nodes in isolation** before connecting them to the fabric.
-
+```
 | **Step** | **What It Validates** | **Tools** | **Duration** | **Pass Criteria** |
 |----------|----------------------|-----------|--------------|-------------------|
 | **1** | GPU health: compute, memory, thermal, power | DCGM diag (`dcgmi diag -r 3`), gpu-burn | 15-60 min | No GPU errors, temps <85°C, no throttling |
@@ -74,13 +74,13 @@ These validate **individual nodes in isolation** before connecting them to the f
 - No point testing fabric if individual GPUs are broken
 - Eliminates "bad node" variables before multi-node testing
 - Faster to debug single-node issues in isolation
-
+```
 ---
 
 ### **PHASE 2: Infrastructure Validation (Steps 4-8, partial 14)**
 
 These validate **network fabric and infrastructure** connecting nodes.
-
+```
 | **Step** | **What It Validates** | **Already Covered Above** |
 |----------|----------------------|---------------------------|
 | **4** | Cable signal quality (BER, errors) | ✅ Yes |
@@ -89,19 +89,19 @@ These validate **network fabric and infrastructure** connecting nodes.
 | **7** | BlueField DPU firmware | ✅ Yes |
 | **8** | Transceiver firmware | ✅ Yes |
 | **14** (partial) | Storage infrastructure (RAID health, NFS mounts) | New - see below |
-
+```
 ---
 
 ### **PHASE 3: Multi-Node Validation (Steps 10-12)**
 
 These validate **inter-node communication and scaling** across the cluster.
-
+```
 | **Step** | **What It Validates** | **Tools** | **Duration** | **Pass Criteria** |
 |----------|----------------------|-----------|--------------|-------------------|
 | **10** | East-West fabric bandwidth | NCCL all-reduce across nodes, perftest (ib_write_bw) | 10-30 min | Achieves expected inter-node BW based on topology |
 | **11** | Multi-node interconnect stability | NCCL tests (long-duration, hours) | 2-24 hours | No hangs, consistent performance, no errors |
 | **12** | Multi-node compute stability | HPL (full cluster or large subset) | 2-24 hours | Consistent TFLOPS, no node drops, stable temps |
-
+```
 **Key distinction from Phase 1:**
 - **2 (HPL single-node)**: Tests ONE node's GPUs
 - **12 (HPL burn-in)**: Tests MANY nodes working together over network
@@ -114,12 +114,12 @@ These validate **inter-node communication and scaling** across the cluster.
 ### **PHASE 4: Application Validation (Steps 13, partial 14)**
 
 These validate **real-world workloads** on the cluster.
-
+```
 | **Step** | **What It Validates** | **Tools** | **Duration** | **Pass Criteria** |
 |----------|----------------------|-----------|--------------|-------------------|
 | **13** | AI training workload stability | NVIDIA NeMo (LLM training) | 4-72 hours | Training progresses, no OOMs, loss decreases, no node failures |
 | **14** (partial) | Storage I/O for training data | fio, dd, dataset loading benchmarks | 1-4 hours | Achieves required GB/s per GPU, no I/O bottlenecks |
-
+```
 **Why NeMo matters:**
 - Tests the **full stack** (GPUs + interconnect + storage + software)
 - Validates you can actually run production workloads
@@ -135,7 +135,7 @@ These validate **real-world workloads** on the cluster.
 - More thorough than DCGM diag alone
 
 **What ClusterKit tests:**
-
+```
 | **Component** | **Tests Performed** |
 |---------------|-------------------|
 | **GPUs** | Compute, memory, ECC, thermal, power, clocks |
@@ -145,7 +145,7 @@ These validate **real-world workloads** on the cluster.
 | **Storage** | RAID health, disk SMART status, basic I/O |
 | **BMC/IPMI** | Firmware versions, sensor readings |
 | **Network** | Basic connectivity checks |
-
+```
 **When to use it:**
 - Initial node acceptance testing
 - After hardware replacement
@@ -297,7 +297,7 @@ Storage testing happens in **two phases**:
 ---
 
 ## **Quick Reference: Tool-to-Step Mapping**
-
+```
 | **Tool/Command** | **Used in Steps** | **Purpose** |
 |------------------|-------------------|-------------|
 | **DCGM diag** | 1 | GPU stress testing |
@@ -312,7 +312,7 @@ Storage testing happens in **two phases**:
 | **perftest** | 10 | RDMA bandwidth (complement to NCCL) |
 | **NeMo** | 13 | AI training workload |
 | **fio / mdadm** | 14 | Storage validation |
-
+```
 ---
 
 **Summary:**
@@ -521,7 +521,7 @@ Recommendation: Replace GPU 2, check PCIe connection on GPU 1
 ========================================
 ```
 ## GPU Stress Testing Complete Reference Table
-
+```
 | **Test Category** | **What It Tests** | **How to Run It** | **What to Measure** | **Good Results Look Like** | **Bad Results Look Like** | **What Bad Results Mean** |
 |-------------------|-------------------|-------------------|---------------------|---------------------------|---------------------------|---------------------------|
 | **FP64 Compute** | Double-precision math capability (scientific/HPC workloads) | Run FP64 GEMM benchmarks or HPL (High Performance Linpack) continuously for hours | • TFLOPS achieved<br>• GPU clocks stability<br>• Temperature<br>• No errors in logs | • Achieves 80-95% of spec TFLOPS<br>• Clocks stay high and stable<br>• No crashes or driver resets | • TFLOPS far below spec<br>• Clocks dropping<br>• Xid errors in logs<br>• GPU hangs/crashes | • Thermal throttling<br>• Power limiting<br>• Marginal GPU silicon<br>• Driver/firmware issues |
@@ -539,7 +539,7 @@ Recommendation: Replace GPU 2, check PCIe connection on GPU 1
 | **Power Draw Stability** | PSUs/PDUs/VRMs handle peak and transient loads | Pull near-max node power repeatedly, test power capping, monitor during load spikes | • Power draw (Watts)<br>• Rail voltages<br>• Throttle reasons<br>• Event logs | • Stable power delivery<br>• No power-limit throttling<br>• No brownouts/resets<br>• PSUs balanced (if redundant) | • Power-limit throttling<br>• Sudden node resets<br>• PSU alarms<br>• One PSU overloaded, other idle | • Weak/failing PSU<br>• Undersized PDU/circuit<br>• Loose power cables<br>• No redundancy configured<br>• VRM issues |
 | **Power Redundancy** | A/B power paths work independently | Unplug one PSU while under load (if redundant PSUs present) | • System stays up<br>• No service interruption<br>• Load balances to remaining PSU | • Node continues running<br>• Automatic failover<br>• No impact to workload | • Node crashes when one PSU unplugged<br>• Alarm but degraded performance<br>• PSUs not load-balancing | • Redundancy not configured<br>• Single PSU failure point<br>• Wrong PSU mode (combined vs redundant) |
 | **Software/Firmware Stability** | Driver/CUDA/NCCL/firmware stack compatible and stable | Run same tests after reboots, cold starts, across different workloads | • Reproducible results<br>• Clean logs<br>• Consistent performance | • Results identical across runs<br>• No version-related crashes<br>• No weird "works sometimes" issues | • Crashes only after reboot<br>• Performance varies wildly<br>• Version-dependent failures<br>• "Works cold, fails warm" | • Driver/CUDA/NCCL mismatch<br>• BIOS/firmware outdated<br>• Container config issues<br>• Kernel module problems |
-
+```
 ---
 
 **Key Terms Quick Reference:**
@@ -574,7 +574,7 @@ dcgmi diag -r 3 | grep "Test Result"
 - ✅ Power draw within limits
 
 **Common Failures & Actions:**
-
+```
 | Failure | Cause | Action |
 |---------|-------|--------|
 | Memory ECC errors | Faulty GPU memory | Replace GPU |
@@ -582,7 +582,7 @@ dcgmi diag -r 3 | grep "Test Result"
 | PCIe bandwidth low | BIOS setting, slot issue | Check BIOS, reseat GPU |
 | Thermal throttling | Cooling insufficient | Check fans, airflow, thermal paste |
 | Low compute performance | Misconfiguration, defective GPU | Check clocks, replace if defective |
-
+```
 **Next Step:** If PASS → Proceed to 2 HPL  
 **If FAIL:** Troubleshoot (Section 5), fix, retest
 
@@ -855,13 +855,13 @@ End of Tests.
 ================================================================================
 ```
 **Understanding the Output:**
-
+```
 | Metric | Meaning | H100 8-GPU Expected | Pass Criteria |
 |--------|---------|---------------------|---------------|
 | **Gflops** | Billions of FLOPS achieved | ~16-18 TFLOPS | ≥90% of theoretical |
 | **Time** | Execution time (seconds) | ~300-400s | Reasonable for problem size |
 | **Residual** | Solution accuracy | <1e-2 | PASSED (<16.0) |
-
+```
 **Theoretical Peak Performance:**
 ```
 H100 GPU Specs:
@@ -1187,7 +1187,7 @@ Performance measured:
 ```
 
 **Understanding NCCL Output:**
-
+```
 | Column | Meaning | What to Look For |
 |--------|---------|------------------|
 | **size (B)** | Message size being transferred | Progression from 8B to 8GB |
@@ -1195,7 +1195,7 @@ Performance measured:
 | **algbw (GB/s)** | Algorithm bandwidth (actual data moved) | Should increase with size |
 | **busbw (GB/s)** | Bus bandwidth (physical wire bandwidth) | Key metric! |
 | **#wrong** | Data corruption errors | MUST be 0! |
-
+```
 **Expected Bus Bandwidth (H100 8-GPU with NVSwitch):**
 
 ```
@@ -1248,14 +1248,14 @@ nvidia-smi nvlink --status -i 0
 - ✅ No error messages or crashes
 
 **Common Issues:**
-
+```
 | Symptom | Cause | Action |
 |---------|-------|--------|
 | Bus bandwidth <3 GB/s | NVLink degraded/failed | Check `dcgmi diag -r 3`, reseat cables |
 | #wrong > 0 | Data corruption | **CRITICAL** - Replace GPU or cables immediately |
 | Test hangs | NCCL misconfiguration | Check `NCCL_DEBUG=INFO`, verify network |
 | Bandwidth not scaling | NVSwitch issue | Check NVSwitch firmware, topology |
-
+```
 **Next Step:** If all Phase 1 tests PASS → Proceed to Phase 2 (Infrastructure Validation)
 
 ---
@@ -1351,17 +1351,17 @@ Link: Node3:Port1 <--> Switch1:Port12
 ```
 
 **Signal Quality Metrics:**
-
+```
 | Metric | Good | Acceptable | Bad | Action |
 |--------|------|------------|-----|--------|
 | Symbol Errors | 0 | <100 | >100 | Replace cable |
 | Bit Error Rate (BER) | <1e-12 | 1e-10 to 1e-12 | >1e-10 | Replace |
 | Link Width | 4x/8x as designed | Same | Running at lower | Reseat/replace |
 | Link Speed | Full rate (400 Gb/s) | Full rate | Degraded | Replace |
-
+```
 
 ## **Infrastructure Validation Order**
-
+```
 | **Phase** | **Step** | **What You're Checking** | **Primary Tools** | 
 |-----------|----------|-------------------------|-------------------|-------------------|
 | **Phase 1: Physical Layer** | 4.4 | Cable signal quality (BER, errors, link health) | `mlxlink`, UFM Cable Validation, `ibcheckerrors` | 
@@ -1370,7 +1370,7 @@ Link: Node3:Port1 <--> Switch1:Port12
 | **Phase 2: Version Compliance** | 4.7 | BlueField DPU firmware/software | `mlxfwmanager`, `flint`, `mst status` | 
 | **Phase 2: Version Compliance** | 4.8 | Transceiver/optics firmware | `mlxcables`, `mlxlink` (module info) | 
 | **Phase 3: Performance Validation** | After 4.4-4.8 | RDMA functional + performance check | **NOW use perftest** | 
-
+```
 ---
 
 ## **STEP 4: Validate Cable Signal Quality**
@@ -1379,7 +1379,7 @@ Link: Node3:Port1 <--> Switch1:Port12
 Physical link health: bit error rates, lane stability, optical power levels, module temperatures
 
 ### **Command Reference Table**
-
+```
 | **Tool** | **Command** | **What It Shows** | **Good Result** | **Bad Result** | **Action If Bad** |
 |----------|-------------|-------------------|-----------------|----------------|-------------------|
 | **mlxlink** | `mlxlink -d <device>` | Link status, speed, width, BER, counters | • State: Active<br>• BER: ~0 or <1e-12<br>• No counter increases | • BER >1e-10<br>• Counters climbing<br>• Link flapping | Reseat cable → replace if persists |
@@ -1389,9 +1389,9 @@ Physical link health: bit error rates, lane stability, optical power levels, mod
 | **ibstat** | `ibstat` | Per-port link status | • State: Active<br>• Physical state: LinkUp<br>• Rate: full (400 Gb/s) | • Rate degraded<br>• Width reduced (8x→4x) | Reseat cable → check switch port |
 | **perfquery** | `perfquery -r` | Port error counters | • All counters: 0 or very low | • PortRcvErrors >0<br>• Counters increasing | Check cable → check receiver |
 | **UFM Cable Validation** | Via UFM GUI or API | "Golden BER Test" - monitors BER over time under load | • BER stable <1e-12<br>• No errors during test | • BER drift during test<br>• Errors under load | Replace cable (marginal under load) |
-
+```
 ### **Key Metrics Decoded**
-
+```
 | **Metric** | **What It Means** | **Threshold** | **If Exceeded** |
 |------------|-------------------|---------------|-----------------|
 | **BER (Bit Error Rate)** | How many bits flip per bits transmitted | <1e-12 (good)<br>1e-10 to 1e-12 (acceptable)<br>>1e-10 (bad) | Replace cable/transceiver |
@@ -1401,7 +1401,7 @@ Physical link health: bit error rates, lane stability, optical power levels, mod
 | **FEC Corrections** | Forward Error Correction events | Low and stable | High/climbing = marginal link |
 | **RX Power (optics)** | Received optical power | -2 to -10 dBm typical | Too low = dirty/bad fiber, too high = saturated receiver |
 | **Module Temp** | Transceiver temperature | 40-60°C normal | >70°C = cooling issue or failing module |
-
+```
 ### **Red Flags That Mean "Replace Cable"**
 - BER >1e-10 consistently
 - Symbol errors increasing over minutes
@@ -1418,7 +1418,7 @@ Physical link health: bit error rates, lane stability, optical power levels, mod
 Correct port-to-port connections match your design (not testing speed/errors here, just "is A plugged into B?")
 
 ### **Command Reference Table**
-
+```
 | **Tool** | **Command** | **What It Shows** | **How to Use** |
 |----------|-------------|-------------------|----------------|
 | **ibnetdiscover** | `ibnetdiscover > topology.txt` | Full fabric map: every node, port, GUID, connection | Compare output to your cabling design doc |
@@ -1426,7 +1426,7 @@ Correct port-to-port connections match your design (not testing speed/errors her
 | **iblinkinfo** | `iblinkinfo` | All links with source/dest, state, speed | Quick visual check: all links active + correct neighbors |
 | **UFM Topology View** | Via UFM GUI | Graphical fabric topology | Visual comparison to expected layout |
 | **UFM Cable Validation** | Topology compare feature | Compares actual vs expected topology | Flags missing links, wrong connections, unexpected neighbors |
-
+```
 ### **Example Verification**
 
 ```
@@ -1457,13 +1457,13 @@ iblinkinfo Output Check:
 All switches run certified, compatible firmware versions
 
 ### **Command Reference Table**
-
+```
 | **Switch Type** | **Command** | **What to Check** |
 |-----------------|-------------|-------------------|
 | **NVIDIA Spectrum (ONYX)** | `show version` | Product name, release version, build ID |
 | **NVIDIA Cumulus** | `cat /etc/cumulus/etc.replace` or `nv show system` | Cumulus Linux version |
 | **Mellanox Neo** | `show version` | MLNX-OS version |
-
+```
 ### **Example Output Check**
 
 ```bash
@@ -1475,7 +1475,7 @@ Hardware revision: A1
 ```
 
 ### **Verification Process**
-
+```
 | **Step** | **Action** | **Tool/Method** |
 |----------|-----------|-----------------|
 | 1 | Get current version from each switch | SSH + `show version` |
@@ -1483,7 +1483,7 @@ Hardware revision: A1
 | 3 | Flag mismatches | Spreadsheet or UFM inventory report |
 | 4 | Upgrade if needed | `image install`, `image boot next`, `reload` |
 | 5 | Re-verify after reboot | `show version` again |
-
+```
 ### **Certified Version Matrix (Example)**
 
 | **Switch Model** | **Certified FW** | **Min Version** | **Status** |
@@ -1500,13 +1500,13 @@ Hardware revision: A1
 DPU firmware + software matches requirements, consistent across fleet
 
 ### **Command Reference Table**
-
+```
 | **Tool** | **Command** | **What It Shows** |
 |----------|-------------|-------------------|
 | **mst** | `mst status` | MST (Mellanox Software Tools) device status |
 | **mlxfwmanager** | `mlxfwmanager` | Installed firmware on all devices |
 | **flint** | `flint -d /dev/mst/mt41692_pciconf0 query` | Detailed FW version, PSID, release date |
-
+```
 ### **Example Output**
 
 ```bash
@@ -1521,7 +1521,7 @@ Description:           BlueField-3 DPU; 400GbE/NDR; Crypto enabled
 ```
 
 ### **Verification Steps**
-
+```
 | **Step** | **Command/Action** |
 |----------|-------------------|
 | Check current FW | `flint -d <device> query` |
@@ -1529,7 +1529,7 @@ Description:           BlueField-3 DPU; 400GbE/NDR; Crypto enabled
 | Upgrade if needed | `mlxfwmanager -u -i <firmware.bin>` |
 | Reboot DPU | `bfb-power-cycle` or `mlxfwreset -d <device>` |
 | Verify after reboot | `flint query` again |
-
+```
 ---
 
 ## **STEP 8: Transceiver/Optics Firmware**
@@ -1538,13 +1538,13 @@ Description:           BlueField-3 DPU; 400GbE/NDR; Crypto enabled
 Optical modules and cables have correct firmware, not marginal
 
 ### **Command Reference Table**
-
+```
 | **Tool** | **Command** | **What It Shows** |
 |----------|-------------|-------------------|
 | **mlxcables** | `mlxcables` | List all connected cables/transceivers |
 | **mlxcable** | `mlxcable -d <device>` | Specific cable/transceiver info |
 | **mlxlink -m** | `mlxlink -d <device> -m` | Module diagnostics (temp, power, vendor info) |
-
+```
 ### **Example: Module Health Check**
 
 ```bash
@@ -1561,20 +1561,20 @@ Module Info:
 ```
 
 ### **What to Check**
-
+```
 | **Field** | **Good** | **Bad** | **Action** |
 |-----------|----------|---------|------------|
 | Temperature | <60°C | >70°C | Check airflow, replace module |
 | RX Power | -2 to -10 dBm | Too low or too high | Clean fiber, replace cable |
 | Alarms | None | Any alarm flags | Check module diagnostics, replace |
 | Firmware version | Matches certified list | Unknown/old | Usually auto-updated by switch FW |
-
+```
 ---
 
 ## **PERFTEST: Where It Actually Fits**
 
 ### **When to Use Perftest**
-
+```
 | **Scenario** | **Use Perftest?** | **Why** |
 |--------------|-------------------|---------|
 | **Before 4.4-4.8 complete** | ❌ No | Premature - physical layer not validated |
@@ -1583,9 +1583,9 @@ Module Info:
 | **To verify topology** | ❌ No | Use ibnetdiscover/iblinkinfo |
 | **To check firmware versions** | ❌ No | Use version query commands |
 | **To prove RDMA works + speed** | ✅ Yes | This is perftest's job |
-
+```
 ### **Perftest Command Reference**
-
+```
 | **Command** | **What It Tests** | **Example** |
 |-------------|-------------------|-------------|
 | `ib_write_bw` | RDMA Write bandwidth | `ib_write_bw -d mlx5_0 -a` (server)<br>`ib_write_bw -d mlx5_0 <server_ip>` (client) |
@@ -1593,25 +1593,25 @@ Module Info:
 | `ib_send_bw` | RDMA Send bandwidth | `ib_send_bw -d mlx5_0 -a` |
 | `ib_write_lat` | RDMA Write latency | `ib_write_lat -d mlx5_0 -a` |
 | `ib_send_lat` | RDMA Send latency | `ib_send_lat -d mlx5_0 -a` |
-
+```
 ### **Expected Results (Example for 400G InfiniBand HDR)**
-
+```
 | **Test** | **Expected** | **Red Flag** |
 |----------|--------------|-------------|
 | **ib_write_bw** | ~45-48 GB/s (single direction) | <40 GB/s |
 | **ib_write_bw** (bidirectional `-b`) | ~90-95 GB/s (both directions) | <80 GB/s |
 | **ib_write_lat** | <2 microseconds | >5 microseconds |
 | **Stability** | Consistent across 10 runs | Jitter >10% run-to-run |
-
+```
 ### **How Perftest Helps (Indirectly) With 4.4**
-
+```
 | **Observation in Perftest** | **Possible Signal Quality Issue** | **What to Check** |
 |-----------------------------|----------------------------------|-------------------|
 | Bandwidth drops randomly | Marginal cable under load | Run mlxlink during perftest, watch BER/errors |
 | High latency jitter | Link retraining / instability | Check ibcheckerrors, perfquery counters |
 | Occasional timeouts | CRC errors / link flapping | mlxlink extended counters, UFM alarms |
 | Can't sustain bidirectional | Flow control / lane issues | mlxlink -e, check for symbol errors |
-
+```
 ---
 
 ## **QUICK DECISION TREE**
@@ -1639,7 +1639,7 @@ All above steps PASS, now need to prove RDMA performance?
 ---
 
 ## **SUMMARY: Tool Purpose Map**
-
+```
 | **Tool** | **Primary Purpose** | **NOT For** |
 |----------|---------------------|-------------|
 | **mlxlink** | Link status, BER, module diagnostics | Topology mapping, version checks |
@@ -1652,7 +1652,7 @@ All above steps PASS, now need to prove RDMA performance?
 | **flint** / **mlxfwmanager** | DPU firmware query/update | Cable testing |
 | **mlxcables** | Transceiver inventory/diagnostics | RDMA performance |
 | **perftest** (ib_*_bw/lat) | RDMA performance validation | Physical layer validation, version checks |
-
+```
 ---
 
 ### 5 Confirm Cabling is Correct
@@ -1743,13 +1743,13 @@ show version
 ```
 
 **Certified Firmware Matrix (Example):**
-
+```
 | Switch Model | Certified Firmware | Min Version | Status |
 |--------------|-------------------|-------------|--------|
 | SN4600 | 3.10.2008 | 3.10.2000 | ✅ Current |
 | SN4700 | 3.10.2106 | 3.10.2000 | ✅ Current |
 | QM8700 | 3.10.2210 | 3.10.2200 | ✅ Current |
-
+```
 ---
 
 ### 7 Confirm FW/SW on BlueField 3
@@ -1814,14 +1814,14 @@ mlxcables -d <device> --cable_prbs show
 ```
 
 ## **Topic Classification by Validation Phase**
-
+```
 | **Topic** | **Belongs to Unit/Phase** | **Step Number** | **Category** |
 |-----------|---------------------------|-----------------|--------------|
 | **Cable Validation (NVIDIA Cable Validation Tool)** | **Phase 2: Infrastructure Validation** | **Step 4.4 & 4.5** | Physical Layer + Topology Verification |
 | **InfiniBand Port Counters** | **Phase 2: Infrastructure Validation** | **Step 4.4** | Cable Signal Quality Monitoring |
 | **Storage (Internal/External, NFS, RAID)** | **Phase 0: System Configuration** or **Post-Infrastructure** | **Pre-validation setup** | Application/Workload Layer (not part of 4.4-4.8) |
 | **UFM (Unified Fabric Manager)** | **Phase 2: Infrastructure Validation** | **Steps 4.4-4.8** | Fabric Management & Monitoring Tool |
-
+```
 ---
 
 ## **Detailed Breakdown**
@@ -1841,14 +1841,14 @@ mlxcables -d <device> --cable_prbs show
 ```
 Cable Validation = 4.4 (BER/signal quality) + 4.5 (topology correctness)
 ```
-
+```
 | **Cable Validation Feature** | **Maps to Step** | **What It Validates** |
 |------------------------------|------------------|----------------------|
 | Golden BER Test | 4.4 | Signal quality, error rates, link stability |
 | Neighbor discovery + topology compare | 4.5 | Correct port-to-port connections vs design |
 | Agent-based validation | 4.5 | Incremental cluster bring-up validation |
 | Report aggregation | 4.4 & 4.5 | Consolidated view of all link/topology issues |
-
+```
 ---
 
 ### **2. InfiniBand Port Counters**
@@ -1862,7 +1862,7 @@ Cable Validation = 4.4 (BER/signal quality) + 4.5 (topology correctness)
 - Used continuously during and after validation
 
 **Mapping to 4.4 validation:**
-
+```
 | **Port Counter Category** | **Purpose in Step 4.4** | **Key Counters** |
 |---------------------------|------------------------|------------------|
 | **Error Counters** | Detect link quality issues | Symbol Errors, Link Error Recovery, Link Downed, Rcv Errors |
@@ -1870,7 +1870,7 @@ Cable Validation = 4.4 (BER/signal quality) + 4.5 (topology correctness)
 | **Congestion Counters** | Identify bottlenecks/issues | XmitWait, Xmit Discards, Normalized Congested Bandwidth |
 | **Integrity Counters** | Physical layer health | Local Integrity Error, Rcv Remote Physical Error |
 | **Calculated Metrics** | Performance analysis | Normalized XmitData (utilization %), Normalized XmitWait (congestion) |
-
+```
 **Red Flag Counters for Step 4.4:**
 ```
 Symbol Errors > 100        → Replace cable
@@ -1896,7 +1896,7 @@ XmitWait high             → Congestion (may indicate fabric issue)
   - File system integrity
 
 **Where storage fits in the full workflow:**
-
+```
 | **Phase** | **What's Validated** | **Storage Role** |
 |-----------|---------------------|------------------|
 | Phase 0: Pre-Infrastructure | System installation, OS, RAID setup | ✅ Configure internal RAID-0 arrays |
@@ -1904,7 +1904,7 @@ XmitWait high             → Congestion (may indicate fabric issue)
 | Phase 2: Infrastructure (4.4-4.8) | Network fabric, cables, switches | ❌ Not involved |
 | Phase 3: Multi-Node | NCCL, distributed training | ✅ NFS mounts, external storage connections |
 | Phase 4: Application | Workload performance | ✅ Storage I/O bandwidth testing |
-
+```
 **Storage validation would include (separate from 4.4-4.8):**
 - `mdadm --detail /dev/md0` - RAID health check
 - NFS mount tests and bandwidth measurement
@@ -1924,7 +1924,7 @@ XmitWait high             → Congestion (may indicate fabric issue)
 - Aggregates port counters, events, alarms across entire fabric
 
 **UFM's role in each step:**
-
+```
 | **Step** | **UFM Feature Used** | **What It Provides** |
 |----------|---------------------|---------------------|
 | **4.4** | Cable Validation plugin (Golden BER Test), Port counters monitoring | BER testing, error counter aggregation, link health dashboards |
@@ -1932,7 +1932,7 @@ XmitWait high             → Congestion (may indicate fabric issue)
 | **4.6** | Device inventory, firmware tracking | Switch firmware version reporting across fabric |
 | **4.7** | Device inventory (if BlueField registered) | DPU firmware visibility (limited) |
 | **4.8** | Cable/module inventory, diagnostics | Transceiver info, module health monitoring |
-
+```
 **Key UFM components for validation:**
 
 ```
@@ -1957,14 +1957,14 @@ UFM Platform
 ---
 
 ## **Quick Reference: Where Each Document Topic Fits**
-
+```
 | **Document Topic** | **Validation Phase** | **Steps** | **Purpose** |
 |-------------------|---------------------|-----------|-------------|
 | Cable Validation Tool guide | Phase 2: Infrastructure | 4.4 + 4.5 | Automate cable/topology validation |
 | InfiniBand Port Counters reference | Phase 2: Infrastructure | 4.4 | Define metrics for link health |
 | Storage configuration (RAID, NFS) | Phase 0: Pre-Infrastructure<br>Phase 4: Application | N/A (outside 4.4-4.8) | System setup, data pipeline |
 | UFM platform documentation | Phase 2: Infrastructure | 4.4-4.8 | Central management tool |
-
+```
 ---
 
 ## **Visual Workflow**
