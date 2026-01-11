@@ -1,5 +1,4 @@
 # AI_Infra_Handbook
-```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    CLUSTER VALIDATION FLOW                      │
 └─────────────────────────────────────────────────────────────────┘
@@ -33,7 +32,7 @@ Phase 4: BURN-IN & PRODUCTION READINESS
 ✅ CLUSTER PRODUCTION READY
 
 ## **Complete Step Classification**
-```
+
 | **Step** | **Title** | **Phase/Category** | **What It Tests** | **Primary Tools** |
 |----------|-----------|-------------------|-------------------|-------------------|
 | **1** | Perform single-node stress test | **Phase 1: Single-Node GPU Validation** | GPU compute, memory, thermal, power on ONE node | DCGM diag, nvidia-smi, gpu-burn |
@@ -50,7 +49,7 @@ Phase 4: BURN-IN & PRODUCTION READINESS
 | **12** | Perform HPL burn-in | **Phase 3: Multi-Node Validation** | Multi-node compute stability and performance | HPL (multi-node configuration) |
 | **13** | Perform Nemo burn-in | **Phase 4: Application Validation** | Real-world AI workload stability (LLM training) | NVIDIA NeMo framework |
 | **14** | Test storage | **Phase 2/4: Infrastructure + Application** | Storage I/O performance and reliability | fio, dd, mdadm, NFS tests |
-```
+
 ---
 
 ## **Detailed Breakdown by Phase**
@@ -58,25 +57,23 @@ Phase 4: BURN-IN & PRODUCTION READINESS
 ### **PHASE 1: Single-Node GPU Validation (Steps 1-3, 9)**
 
 These validate **individual nodes in isolation** before connecting them to the fabric.
-```
+
 | **Step** | **What It Validates** | **Tools** | **Duration** | **Pass Criteria** |
 |----------|----------------------|-----------|--------------|-------------------|
 | **1** | GPU health: compute, memory, thermal, power | DCGM diag (`dcgmi diag -r 3`), gpu-burn | 15-60 min | No GPU errors, temps <85°C, no throttling |
 | **2** | FP64 compute performance | HPL (single-node) | 30-60 min | Achieves 80-95% of theoretical TFLOPS |
 | **3** | Intra-node GPU interconnect (NVLink/NVSwitch) | NCCL tests (all-reduce within node) | 5-15 min | Near-peak NVLink BW, no hangs |
 | **9** | Comprehensive node health | ClusterKit (NVIDIA tool) | 20-40 min | All subsystems pass (GPU, CPU, mem, storage, BMC) |
-```
+
 **Why these come first:**
 - No point testing fabric if individual GPUs are broken
 - Eliminates "bad node" variables before multi-node testing
 - Faster to debug single-node issues in isolation
-```
 ---
-```
 ### **PHASE 2: Infrastructure Validation (Steps 4-8, partial 14)**
 
 These validate **network fabric and infrastructure** connecting nodes.
-```
+
 | **Step** | **What It Validates** | **Already Covered Above** |
 |----------|----------------------|---------------------------|
 | **4** | Cable signal quality (BER, errors) | ✅ Yes |
@@ -85,19 +82,19 @@ These validate **network fabric and infrastructure** connecting nodes.
 | **7** | BlueField DPU firmware | ✅ Yes |
 | **8** | Transceiver firmware | ✅ Yes |
 | **14** (partial) | Storage infrastructure (RAID health, NFS mounts) | New - see below |
-```
+
 ---
 
 ### **PHASE 3: Multi-Node Validation (Steps 10-12)**
 
 These validate **inter-node communication and scaling** across the cluster.
-```
+
 | **Step** | **What It Validates** | **Tools** | **Duration** | **Pass Criteria** |
 |----------|----------------------|-----------|--------------|-------------------|
 | **10** | East-West fabric bandwidth | NCCL all-reduce across nodes, perftest (ib_write_bw) | 10-30 min | Achieves expected inter-node BW based on topology |
 | **11** | Multi-node interconnect stability | NCCL tests (long-duration, hours) | 2-24 hours | No hangs, consistent performance, no errors |
 | **12** | Multi-node compute stability | HPL (full cluster or large subset) | 2-24 hours | Consistent TFLOPS, no node drops, stable temps |
-```
+
 **Key distinction from Phase 1:**
 - **2 (HPL single-node)**: Tests ONE node's GPUs
 - **12 (HPL burn-in)**: Tests MANY nodes working together over network
@@ -110,12 +107,12 @@ These validate **inter-node communication and scaling** across the cluster.
 ### **PHASE 4: Application Validation (Steps 13, partial 14)**
 
 These validate **real-world workloads** on the cluster.
-```
+
 | **Step** | **What It Validates** | **Tools** | **Duration** | **Pass Criteria** |
 |----------|----------------------|-----------|--------------|-------------------|
 | **13** | AI training workload stability | NVIDIA NeMo (LLM training) | 4-72 hours | Training progresses, no OOMs, loss decreases, no node failures |
 | **14** (partial) | Storage I/O for training data | fio, dd, dataset loading benchmarks | 1-4 hours | Achieves required GB/s per GPU, no I/O bottlenecks |
-```
+
 **Why NeMo matters:**
 - Tests the **full stack** (GPUs + interconnect + storage + software)
 - Validates you can actually run production workloads
@@ -131,7 +128,7 @@ These validate **real-world workloads** on the cluster.
 - More thorough than DCGM diag alone
 
 **What ClusterKit tests:**
-```
+
 | **Component** | **Tests Performed** |
 |---------------|-------------------|
 | **GPUs** | Compute, memory, ECC, thermal, power, clocks |
@@ -141,7 +138,7 @@ These validate **real-world workloads** on the cluster.
 | **Storage** | RAID health, disk SMART status, basic I/O |
 | **BMC/IPMI** | Firmware versions, sensor readings |
 | **Network** | Basic connectivity checks |
-```
+
 **When to use it:**
 - Initial node acceptance testing
 - After hardware replacement
@@ -234,8 +231,8 @@ Storage testing happens in **two phases**:
 - Random read: >100k IOPS (for small file access)
 - Dataset loads in acceptable time for workflow
 - No I/O wait spikes during training
+
 ---
-```
 ## **Complete Workflow Diagram**
 ┌─────────────────────────────────────────────────────────────────┐
 │ PHASE 1: Single-Node GPU Validation                             │
@@ -281,7 +278,7 @@ Storage testing happens in **two phases**:
               ↓ SUCCESS
               ↓
          ✅ Cluster ready for production
-```
+
 
 ---
 
