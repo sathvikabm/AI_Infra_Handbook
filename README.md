@@ -508,9 +508,9 @@ Overall Status: FAIL
 
 Recommendation: Replace GPU 2, check PCIe connection on GPU 1
 ========================================
-```
+
 ## GPU Stress Testing Complete Reference Table
-```
+
 | **Test Category** | **What It Tests** | **How to Run It** | **What to Measure** | **Good Results Look Like** | **Bad Results Look Like** | **What Bad Results Mean** |
 |-------------------|-------------------|-------------------|---------------------|---------------------------|---------------------------|---------------------------|
 | **FP64 Compute** | Double-precision math capability (scientific/HPC workloads) | Run FP64 GEMM benchmarks or HPL (High Performance Linpack) continuously for hours | • TFLOPS achieved<br>• GPU clocks stability<br>• Temperature<br>• No errors in logs | • Achieves 80-95% of spec TFLOPS<br>• Clocks stay high and stable<br>• No crashes or driver resets | • TFLOPS far below spec<br>• Clocks dropping<br>• Xid errors in logs<br>• GPU hangs/crashes | • Thermal throttling<br>• Power limiting<br>• Marginal GPU silicon<br>• Driver/firmware issues |
@@ -528,8 +528,7 @@ Recommendation: Replace GPU 2, check PCIe connection on GPU 1
 | **Power Draw Stability** | PSUs/PDUs/VRMs handle peak and transient loads | Pull near-max node power repeatedly, test power capping, monitor during load spikes | • Power draw (Watts)<br>• Rail voltages<br>• Throttle reasons<br>• Event logs | • Stable power delivery<br>• No power-limit throttling<br>• No brownouts/resets<br>• PSUs balanced (if redundant) | • Power-limit throttling<br>• Sudden node resets<br>• PSU alarms<br>• One PSU overloaded, other idle | • Weak/failing PSU<br>• Undersized PDU/circuit<br>• Loose power cables<br>• No redundancy configured<br>• VRM issues |
 | **Power Redundancy** | A/B power paths work independently | Unplug one PSU while under load (if redundant PSUs present) | • System stays up<br>• No service interruption<br>• Load balances to remaining PSU | • Node continues running<br>• Automatic failover<br>• No impact to workload | • Node crashes when one PSU unplugged<br>• Alarm but degraded performance<br>• PSUs not load-balancing | • Redundancy not configured<br>• Single PSU failure point<br>• Wrong PSU mode (combined vs redundant) |
 | **Software/Firmware Stability** | Driver/CUDA/NCCL/firmware stack compatible and stable | Run same tests after reboots, cold starts, across different workloads | • Reproducible results<br>• Clean logs<br>• Consistent performance | • Results identical across runs<br>• No version-related crashes<br>• No weird "works sometimes" issues | • Crashes only after reboot<br>• Performance varies wildly<br>• Version-dependent failures<br>• "Works cold, fails warm" | • Driver/CUDA/NCCL mismatch<br>• BIOS/firmware outdated<br>• Container config issues<br>• Kernel module problems |
-```
----
+
 
 **Key Terms Quick Reference:**
 
