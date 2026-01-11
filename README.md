@@ -1,4 +1,5 @@
 # AI_Infra_Handbook
+```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    CLUSTER VALIDATION FLOW                      │
 └─────────────────────────────────────────────────────────────────┘
@@ -30,7 +31,7 @@ Phase 4: BURN-IN & PRODUCTION READINESS
          ↓ ALL BURN-IN PASS?
          
 ✅ CLUSTER PRODUCTION READY
-
+```
 ## **Complete Step Classification**
 
 | **Step** | **Title** | **Phase/Category** | **What It Tests** | **Primary Tools** |
@@ -233,6 +234,7 @@ Storage testing happens in **two phases**:
 - No I/O wait spikes during training
 
 ---
+```
 ## **Complete Workflow Diagram**
 ┌─────────────────────────────────────────────────────────────────┐
 │ PHASE 1: Single-Node GPU Validation                             │
@@ -279,7 +281,7 @@ Storage testing happens in **two phases**:
               ↓
          ✅ Cluster ready for production
 
-
+```
 ---
 
 ## **Quick Reference: Tool-to-Step Mapping**
@@ -490,7 +492,7 @@ dcgmi diag -r 3
 [DCGM] Testing PCIe bandwidth...
 - GPU 0 → CPU: 63 GB/s (PCIe Gen5 x16) ✓ PASS
 - GPU 1 → CPU: 31 GB/s ✗ WARNING (running at x8?)
-```
+
 
 **Final Result:**
 
@@ -505,6 +507,7 @@ Overall Status: FAIL
 - Power: Stable
 
 Recommendation: Replace GPU 2, check PCIe connection on GPU 1
+```
 ========================================
 
 ## GPU Stress Testing Complete Reference Table
@@ -1120,7 +1123,7 @@ Performance measured:
 ```
 
 **Sample Output:**
-
+```
 # nccl-tests: Version 2.13.9
 # 
 # Using devices
@@ -1170,7 +1173,7 @@ Performance measured:
 # Out of bounds values : 0 OK
 # Avg bus bandwidth    : 4.52531 
 #
-
+```
 
 **Understanding NCCL Output:**
 
