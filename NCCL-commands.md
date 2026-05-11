@@ -135,7 +135,7 @@ $NTEST/all_reduce_perf -b 1G -e 1G -g 4 -n 200 -w 20
 
 -n is the number of timed iterations averaged, -w is the number of throwaway warmup iterations before timing starts. The drill predicted -w 0 would show 5–15% lower busbw because NCCL does init work on the first iteration. Yours only dropped ~2%. Why? Even with -w 0, you ran 5 iterations — 4 of them clean. The warmup cost gets diluted across the 5-iteration average. With -n 1 -w 0 you'd see the effect clearly.
 
-### The takeaway: always use -w ≥ 5, and pick -n based on how stable you need the average. -n 50 with -w 10 is the sweet spot for normal benchmarking. -n 1000 for soak/burn-in.
+The takeaway: always use -w ≥ 5, and pick -n based on how stable you need the average. -n 50 with -w 10 is the sweet spot for normal benchmarking. -n 1000 for soak/burn-in.
 
 ---
 
@@ -163,7 +163,7 @@ $NTEST/all_reduce_perf -b 1G -e 1G -g 4 -n 50 -w 10 -c 1
 
 -c 0 skips the validation step; -c 1 runs it and counts mismatches. The drill predicted 5–15% overhead from validation. Yours showed essentially zero. Why? Validation runs once at the end of all 50 iterations, not per iteration. At 1 GB and -n 50, the network time (3.3 seconds total) completely swallows the validation copy (microseconds). With smaller messages or fewer iterations, you'd see the overhead.
 
-### The takeaway: -c 0 for clean peak BW measurement, -c 1 for burn-in or anytime you want to catch silent data corruption. The 0 in the #wrong column is your hardware health signal — if it's ever non-zero, your GPUs or interconnect are flaky.
+The takeaway: -c 0 for clean peak BW measurement, -c 1 for burn-in or anytime you want to catch silent data corruption. The 0 in the #wrong column is your hardware health signal — if it's ever non-zero, your GPUs or interconnect are flaky.
 ---
 
 ## Drill 6 — `-o` (operation type) — does op affect BW?
@@ -200,7 +200,7 @@ $NTEST/all_reduce_perf -b 1G -e 1G -g 4 -n 50 -w 10 -o avg
 
 All within ~2% of each other — basically noise. The reduction operation runs in a fused GPU kernel alongside the network transfer, and modern GPUs do min/max/sum/prod at speeds that are completely overshadowed by network time. The drill predicted avg would be slightly lower because of the post-divide; in your data it's actually mid-pack, so even that small effect is below the run-to-run variance.
 
-### The takeaway: changing -o does not move the BW needle. Classic exam trap.
+The takeaway: changing -o does not move the BW needle. 
 
 ---
 
@@ -239,7 +239,7 @@ $NTEST/all_reduce_perf -b 1G -e 1G -g 4 -n 50 -w 10 -d int8
 This one is brilliantly counter-intuitive. All four are essentially identical — and that's the whole point. -b and -e are in bytes, not elements. 1 GB of FP32 contains 256M elements; 1 GB of int8 contains 1B elements. Same byte volume → same network time → same busbw.
 The count column shifts to keep the byte size constant (look at it in your output: 268M / 537M / 1B). The wire only sees bytes; it doesn't care what those bytes mean.
 
-### The takeaway: busbw is bytes/second. Changing -d changes element count, not byte count. If someone tells you "switching to FP16 doubled my comms throughput," they almost certainly halved their message volume, not their wire speed.
+The takeaway: busbw is bytes/second. Changing -d changes element count, not byte count. If someone tells you "switching to FP16 doubled my comms throughput," they almost certainly halved their message volume, not their wire speed.
 
 ---
 
@@ -277,7 +277,7 @@ $NTEST/all_reduce_perf -b 1G -e 1G -g 2 -t 2 -n 50 -w 10
 
 In real distributed training, you almost always run multi-process with one GPU per process (via MPI or torchrun), which is -g 1 -t 1 on each rank. The -t > 1 mode is more of a debugging/exploration knob.
 
-### The takeaway: g × t = total GPUs. Most of the time use -t 1.
+The takeaway: g × t = total GPUs. Most of the time use -t 1.
 
 ---
 
@@ -306,7 +306,7 @@ $NTEST/all_reduce_perf -b 1G -e 1G -g 4 -n 50 -w 10 -z 1
 Notice the Blocking Enabled: wait for completion and barrier after each collective line in your -z 1 output — that's the flag taking effect. With -z 0 (default), the CPU spins waiting for GPU completion (high CPU%, low latency). With -z 1, the CPU sleeps and gets woken by the kernel (lower CPU%, slightly higher latency). At 1 GB messages, the latency difference vanishes into the network time, so busbw is basically unchanged.
 You didn't run top in a second terminal to compare CPU usage, but if you had, you'd have seen -z 0 pinning a core at 100% while -z 1 stayed near idle.
 
-### The takeaway: -z 1 saves CPU at small latency cost. Almost never the bottleneck — leave it at default.
+The takeaway: -z 1 saves CPU at small latency cost. Almost never the bottleneck — leave it at default.
 
 ---
 
@@ -329,7 +329,7 @@ $NTEST/all_reduce_perf -b 1G -e 1G -g 4 -n 50 -w 10 -p 1
 
 -p 1 parallelizes the call to ncclCommInitRank, which makes the initial communicator setup faster on big jobs. It does not affect steady-state collective performance — your numbers confirm it (both ~24 GB/s within noise). On a 4-GPU pod the init delta is unmeasurable; on a 1000-GPU job it can shave seconds off startup.
 
-### The takeaway: -p is a startup-time optimization, not a runtime one.
+The takeaway: -p is a startup-time optimization, not a runtime one.
 
 ---
 
@@ -406,7 +406,7 @@ $NTEST/broadcast_perf       -b 1G -e 1G -g 4 -n 30 -w 5
 Every factor checks out to within decimal precision. The reason algbw varies wildly (16, 30, 30, 27) but busbw clusters at 23–27 is that algbw measures "how fast does the user-visible operation complete," while busbw measures "how saturated is each physical link." Different collectives push different amounts of data through the ring per byte of user output. The factor compensates.
 Broadcast is slightly higher (26.7) than the others (~24) because it has fewer hops per element — it doesn't have to do both a scatter and a gather phase like all_reduce conceptually does.
 
-### Lock-in: **busbw is the link-level rate**, regardless of collective. The factor compensates.
+Lock-in: **busbw is the link-level rate**, regardless of collective. The factor compensates.
 
 ---
 
