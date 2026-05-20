@@ -1,76 +1,229 @@
-What is HPL?
-HPL (High-Performance Linpack) is a benchmark program that measures how fast a computer cluster can solve a massive system of linear equations. 
-It's the classic test used to rank the world's fastest supercomputers on the TOP500 list.
+# HPL Benchmark 
 
-The core idea: take a giant matrix equation Ax = b, factor it into simpler pieces (LU factorization), then solve. 
-The bigger the matrix you can solve, and the faster you solve it, the better your score measured in Gflops (billions of floating-point operations per second).
-The entire point is to measure how many floating-point operations your machine can do per second (Gflops). The matrix is just the workload, the exercise that makes the machine sweat.
+## What HPL Does
 
-Here's the key insight: HPL is not solving a real scientific problem. Nobody actually needs the answer x. 
-The matrix A is randomly generated, b is randomly generated, and the solution x gets thrown away after checking it's correct.
-The entire point is to measure how many floating-point operations your machine can do per second (Gflops). The matrix is just the workload — the exercise that makes the machine sweat.
-So why vary N? Because the performance number changes with N, and you want the peak performance — the highest Gflops your machine can achieve. Here's why N affects it:
-For small N (say 1,000), the matrix fits entirely in cache. Sounds great, but the total work is tiny — about 670 million operations. The overhead of setting up MPI communication, distributing data, and synchronizing processors eats into that small amount of work. Your Gflops number looks bad.
-For medium N (say 50,000), you're doing real work — about 83 trillion operations. The communication overhead is now a tiny fraction of total work. Gflops go up.
-For the largest N that fits in memory, you get the best ratio of useful work to overhead. That's your peak benchmark number.
-But if N is too large and exceeds your RAM, the operating system starts swapping data to disk, and performance collapses.
-So the goal is: find the largest N that fits in about 80% of your total RAM, because that gives the highest Gflops.
-You test a few values of N near that maximum to confirm you've found the sweet spot.
+HPL solves `Ax = b` where A is a random N×N matrix (FP64). Nobody needs the answer — it's a stress test. The score is **Gflops** (billions of floating-point ops per second). Total work ≈ `2/3·N³ + 2·N²`.
 
+The algorithm: **LU factorization with partial pivoting**. Decompose A into L (lower triangular) × U (upper triangular), then solve via forward/backward substitution. The factorization is where all the compute happens.
 
-How We Solve It: The Algorithm
+HPL is the TOP500 benchmark.
 
-Ax = b 
+---
 
-A is always square in HPL. 
-A is N-by-N, x is N-by-1, and b is N-by-1.
+## HPL.dat Parameters
 
-The standard method is called LU factorization, and here's the core idea:
-Instead of solving Ax equals b directly (which would take forever), you decompose A into two simpler matrices: L and U. 
-L is lower triangular (zeros above the diagonal), U is upper triangular (zeros below the diagonal). The magic is that multiplying L times U gives you back A.
-Once you have L times U times x equals b, you solve it in two quick steps:
-First, solve L times y equals b for y (easy because L is triangular).
-Then, solve U times x equals y for x (easy because U is triangular).
-Each triangular solve is straightforward — just forward or backward substitution.
-The hard part is computing L and U from A. That's where the floating-point operations come from. For an N-by-N matrix, computing the LU factorization involves roughly two-thirds times N cubed operations. 
-So if N is 100,000, that's about 660 billion operations. 
-At 10 billion operations per second, that's 66 seconds of pure compute.
+```
+N       — matrix dimension (A is N×N, uses N²×8 bytes of memory)
+NB      — block/tile size for 2D block-cyclic distribution
+P × Q   — process grid (must equal total MPI ranks / GPUs)
+PFACT   — panel factorization algorithm (0=Left, 1=Crout, 2=Right)
+RFACT   — recursive panel factorization algorithm (same options)
+BCAST   — broadcast algorithm (0=1rg, 1=1rM, 2=2rg, 3=2rM, 4=Lng, 5=LnM)
+DEPTH   — lookahead depth
+SWAP    — swapping algorithm (0=bin-exch, 1=long, 2=mix)
+Threshold — residual pass/fail gate (default 16.0)
+```
 
+---
 
-You're running a standardized stress test on your machine. The workflow is:
+## Scientific Notation Quick Reference
 
-1) HPL generates a random N-by-N matrix A and a random vector b.
-2) It distributes the data across your P-by-Q grid of processors in blocks of size NB.
-3) It performs LU factorization — the heavy computation — measuring how many operations per second it achieves.
-4) It solves for x using backward substitution.
-5) It regenerates A and b, multiplies A times x, and checks if the result matches b (within floating-point rounding error).
-6) It reports the Gflops achieved.
+| Notation | Value | Meaning |
+|---|---|---|
+| `1.11e-16` | 0.000000000000000111 | Machine epsilon (tiny) |
+| `5.05e-03` | 0.00505 | Residual (small) |
+| `4.41e+01` | 44.1 | Gflops (normal) |
 
+Negative exponent = tiny. Positive = big. Bigger negative = tinier.
 
+---
 
-Where Block Size NB Comes In
-Now here's the problem: if your computer has a cache (which it does), you want to keep reusing data that's already loaded into fast memory. If you process the matrix one row at a time, you're constantly loading new data.
-NB is the block size — the number of rows and columns you process together in one chunk.
-When NB is 64, you take a 64-by-64 square of the matrix, load it into cache, and do all your operations on that chunk before moving to the next chunk. This is way faster than processing one row at a time because the CPU doesn't constantly wait for data from main memory.
-Typical values: NB is usually between 32 and 256. On modern hardware, 64 or 128 is common.
-The tradeoff: if NB is too small, you get poor cache efficiency. If NB is too large, load balancing across processors gets worse (some processors finish their block while others are still working on theirs).
-N — The Problem Size
-N is the dimension of your matrix. If N equals 10,000, your matrix is 10,000 by 10,000.
-Here's the critical insight: bigger N means better performance numbers because you're doing more work per unit of communication overhead.
-Imagine sending a message across your network takes 1 millisecond. If your block is tiny, you spend most of your time waiting for messages. If your block is huge, you do billions of operations between messages, so the communication cost becomes negligible.
-That's why in the performance tables you saw earlier, the Gflops go up as N increases — the algorithm gets more efficient, not because the hardware got faster, but because the ratio of compute to communication improved.
-How do you choose N? The HPL documentation recommends starting with the largest N that fits in your available memory. If you've got 64 gigabytes, and each number in the matrix takes 8 bytes (double precision floating point), you can fit roughly 8 billion numbers. Since the matrix is square, N-squared must be around 8 billion, so N is roughly 90,000.
-But here's the practical rule: use about 80 percent of your available memory. This gives you headroom for the operating system and temporary arrays that HPL allocates during the factorization.
-P and Q — The Process Grid
-Now you've got multiple processors (maybe 256 of them). You can't just give each processor one row — you need a way to divide the work logically.
-HPL arranges your P total processors into a P-by-Q grid. If you have 256 processors, you might arrange them as 16-by-16 (so P equals 16 and Q equals 16). Or 8-by-32. Or even 1-by-256 if you wanted (though that's terrible).
-Here's why the grid matters: the LU factorization proceeds column by column. In each step:
+## Machine Epsilon & Residual Check
 
-One column of the processor grid (called the "panel") factors a vertical slice of the matrix.
-That column broadcasts the results across rows (horizontally) so all processors get the data they need.
-All processors then update their local piece of the matrix in parallel.
+```
+eps = 1.110223e-16
+```
 
-If your grid is 1-by-256 (one row, 256 columns), then only one processor is factoring the panel at any given moment. The other 255 are idle. That's horrible — you've got 99.6% idle time.
-If your grid is 16-by-16, work is distributed better. The factorization step involves 16 processors working together, and the broadcast happens to 16 processors in parallel.
-The rule of thumb: make P and Q roughly equal, or let Q be slightly larger than P. So for 256 processors, 16-by-16 is good. For 128 processors, 8-by-16 beats 4-by-32.
+This is the smallest FP64 gap near 1.0 — hardware constant, always the same.
 
+**Residual formula:**
+
+```
+||Ax-b||∞ / (eps × (||A||∞ × ||x||∞ + ||b||∞) × N)
+```
+
+This ratio must be **< threshold (16.0)** to PASS.
+
+**Why threshold = 16×eps?** Each floating-point operation introduces tiny rounding error. Over N³ operations, errors accumulate. 16× gives headroom for normal numerical drift.
+
+**PASS** = normal FP noise. **FAIL** = something broken (bad memory, ECC errors, overheating) OR misconfigured threshold.
+
+### Examples
+
+| Expected | Computed | Residual | vs 16×eps (1.78e-15) | Result |
+|---|---|---|---|---|
+| 5.0 | 5.0000000000000008 | 8e-16 | below | PASS |
+| 1000.0 | 1000.00000001 | 1e-8 | way above | FAIL |
+| 0.1+0.2 | 0.30000000000000004 | 4e-17 | below | PASS |
+
+Parallel GPUs can produce different results because `(a+b)+c ≠ a+(b+c)` in floating point — thread scheduling, reduction trees, and fused multiply-add all cause tiny drift.
+
+---
+
+## HPL Output Anatomy
+
+```
+T/V                N    NB     P     Q               Time                 Gflops
+WR10C2C4        4000   192     1     1               0.97             4.4105e+01
+```
+
+**T/V code `WR10C2C4`:** W=wall time, R=row-major, 1=BCAST variant, 0=lookahead depth, C=Crout PFACT, 2=mix swap, C=Crout RFACT, 4=detail.
+
+**Progress lines** (`Column=... Fraction=... Gflops=...`): one line per NB-wide panel processed. Fraction = Column/N. Gflops = cumulative average, not instantaneous.
+
+**VVV timing breakdown:**
+
+| Field | What it measures |
+|---|---|
+| rfact | Recursive panel factorization (serial bottleneck) |
+| pfact | Panel factorization within rfact |
+| mxswp | Pivot row swaps during factorization |
+| update | Trailing matrix update (parallel DGEMM — the bulk) |
+| laswp | Row swaps during update |
+| up tr sv | Upper triangular solve (back-substitution) |
+
+These overlap, so they don't sum to total Time.
+
+---
+
+## Experiment Results (macOS Docker, Apple Silicon)
+
+### Setup
+
+Docker container with netlib HPL 2.3 + OpenBLAS + OpenMPI. See `Dockerfile` and `Make.linux`.
+
+```bash
+docker run --rm -it -v ~/hpl-lab/exercises:/workspace hpl-lab
+./run_hpl.sh <N> <NB> <P> <Q> [PFACT] [RFACT] [BCAST] [THRESHOLD]
+```
+
+---
+
+### Experiment A — Block Size (NB) Sweep
+
+**Fixed:** N=4000, P=1, Q=1
+
+| NB | Gflops | vs Best | rfact (s) | update (s) |
+|---|---|---|---|---|
+| 64 | 42.49 | -5.1% | 0.03 | 0.97 |
+| 128 | 44.27 | -1.2% | 0.04 | 0.92 |
+| 192 | 44.50 | -0.7% | 0.05 | 0.90 |
+| **256** | **44.80** | **BEST** | 0.07 | 0.88 |
+| 384 | 44.60 | -0.4% | 0.10 | 0.86 |
+| 512 | 43.57 | -2.7% | 0.12 | 0.85 |
+
+**Pattern:** rfact grows with NB (bigger panels to factor), update shrinks (fewer but more efficient DGEMM calls). Peak is where the tradeoff balances — NB=256 on this hardware.
+
+**Exam answer:** "NB changed from 256→512, perf dropped" → tiles exceeded cache capacity, panel factorization cost grew faster than DGEMM efficiency gained.
+
+---
+
+### Experiment B — Problem Size (N) Sweep
+
+**Fixed:** NB=192, P=1, Q=1
+
+| N | Memory | Gflops | Time (s) |
+|---|---|---|---|
+| 500 | 1.9 MB | 22.83 | 0.00 |
+| 1000 | 7.6 MB | 34.33 | 0.02 |
+| 2000 | 30.5 MB | 41.31 | 0.13 |
+| 4000 | 122 MB | 44.16 | 0.97 |
+| 8000 | 488 MB | 45.97 | 7.43 |
+| 12000 | 1.1 GB | 46.47 | 24.80 |
+
+**Pattern 1 — Gflops rises then plateaus.** Small N = overhead dominates (49% efficiency at N=500). Large N = near peak (99% at N=12000). This is why you use ~80% of available memory.
+
+**Pattern 2 — Time grows as N³.** Doubling N ≈ 8× time:
+
+| N doubled | Time ratio | Expected |
+|---|---|---|
+| 1000→2000 | 6.5× | 8× |
+| 2000→4000 | 7.5× | 8× |
+| 4000→8000 | 7.7× | 8× |
+
+---
+
+### Experiment C — Process Grid (P×Q) Sweep
+
+**Fixed:** N=8000, NB=192
+
+| P×Q | np | Gflops | Time (s) | rfact (s) | mxswp (s) | update (s) |
+|---|---|---|---|---|---|---|
+| 1×1 | 1 | 44.13 | 7.74 | 0.20 | 0.01 | 7.53 |
+| **1×2** | **2** | **80.08** | **4.26** | **0.13** | **0.01** | **4.14** |
+| 2×1 | 2 | 79.43 | 4.30 | 0.18 | 0.09 | 4.14 |
+| 2×2 | 4 | 4.16 | 82.04 | 40.94 | 23.75 | 46.18 |
+| 1×4 | 4 | 9.65 | 35.37 | 4.16 | 0.01 | 32.08 |
+| 4×1 | 4 | 3.12 | 109.47 | 93.80 | 65.70 | 14.14 |
+
+**Why np=2 helped but np=4 collapsed:** Mac has 2 performance cores — 2 processes get real parallelism. 4 processes on 2 cores = pure contention. On a real cluster with separate GPUs, more processes = faster.
+
+**Why P×Q orientation matters — the mxswp column tells the story:**
+
+- **4×1** (P=4): `mxswp = 65.70s` — 4 processes swapping pivot rows vertically, thrashing
+- **1×4** (Q=4): `mxswp = 0.01s` — only 1 process in the panel column, no vertical swaps
+- **2×2**: `mxswp = 23.75s` — middle ground
+
+**How P and Q work in the algorithm:**
+
+P = processes sharing a block-column, talking **vertically** (panel broadcast + pivot swaps). This direction is used heavily → more P = more vertical communication = slower.
+
+Q = processes sharing a block-row, talking **horizontally** (trailing update distribution). Used less frequently → more Q = less painful.
+
+**Exam rule for real clusters:** near-square grid, P ≥ Q for NVIDIA Ozaki-II. 8 GPUs → 4×2. 32 GPUs → 8×4.
+
+---
+
+## Memory Sizing
+
+```
+Matrix A = N² × 8 bytes
+Total with workspace ≈ N² × 8 × 1.1
+Target N: use ~80% of available GPU/system memory
+```
+
+| Memory | Max N (approx) |
+|---|---|
+| 8 GB | ~30,000 |
+| 40 GB (A100) | ~67,000 |
+| 80 GB (H100) | ~95,000 |
+
+---
+
+## Exam Cheat Sheet
+
+| Parameter | Key fact |
+|---|---|
+| N | Bigger = higher Gflops (better compute/comm ratio). Use 80% of memory. Time ∝ N³. |
+| NB | Sweet spot exists (cache vs DGEMM efficiency). Typical: 192/256/448 on GPUs. N should be divisible by NB. |
+| P×Q | Must equal GPU count. Near-square. P ≥ Q on NVIDIA. Mismatch with `-np` → crash. |
+| PFACT/RFACT | Left/Crout/Right — small impact (1-5%), know they exist. |
+| BCAST | 6 algorithms (1rg through LnM). Matters at 256+ GPUs. |
+| Threshold | 16.0 default. Residual doesn't change when you change threshold — only the gate does. |
+| FAILED | Could be bad threshold OR real hardware issue (ECC errors, overheating → residual is NaN or 1000+). |
+| eps | 1.11e-16 always. Hardware constant. Can't change it. |
+
+---
+
+## Lab Setup Reference
+
+```bash
+# Build (one time)
+cd ~/hpl-lab
+docker build -t hpl-lab .
+
+# Run
+docker run --rm -it -v ~/hpl-lab/exercises:/workspace hpl-lab
+./run_hpl.sh 4000 192 1 1                    # basic
+./run_hpl.sh 4000 192 1 1 0 0 0 0.001        # force FAIL
+```
