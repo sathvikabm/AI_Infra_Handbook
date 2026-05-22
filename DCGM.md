@@ -188,6 +188,9 @@ root@5128e2f4e9d5:/#
 
 
 watch with watch -n 1 nvidia-smi on another terminal
+wht happened and was noticable evidently was temperature went up and came down 
+Persistence-MPwr:Usage/Cap - this also fluctuated 
+
 ```
 Fri May 22 00:33:23 2026
 +-----------------------------------------------------------------------------------------+
